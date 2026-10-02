@@ -11,7 +11,8 @@ export const gameConfig = Object.freeze({
   playerNameMaxLength: 40,
   leaderboardStorageKey: 'nawras-memory.leaderboard.v1',
   sound: Object.freeze({ enabled: true, volume: 0.16 }),
-  cardBackImagePath: 'assets/branding/nawras-name.png',
+  brandImagePath: 'assets/branding/nawras-name.png',
+  cardBackImagePath: 'assets/branding/light-nawras.png',
   pairs: Object.freeze([
     { id: 'nawras', label: 'NawrasEdu', imagePath: 'assets/branding/nawras-small.png' },
     { id: 'python', label: 'Python', imagePath: 'assets/cards/python.png' },

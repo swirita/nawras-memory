@@ -28,7 +28,7 @@ function showAsset(container, path, label) {
   image.src = assetUrl(path);
 }
 
-showAsset(document.querySelector('#landing-brand'), gameConfig.cardBackImagePath, 'NawrasEdu');
+showAsset(document.querySelector('#landing-brand'), gameConfig.brandImagePath, 'NawrasEdu');
 
 // Keep the landing name across rounds; it is only displayed locally.
 export function getPlayerName() {
@@ -88,7 +88,7 @@ screens.innerHTML = `
     </div>
   </dialog>`;
 main.append(screens);
-showAsset(document.querySelector('#round-brand'), gameConfig.cardBackImagePath, 'NawrasEdu');
+showAsset(document.querySelector('#round-brand'), gameConfig.brandImagePath, 'NawrasEdu');
 const board = document.querySelector('.card-board');
 const gameScreen = document.querySelector('.game-screen');
 const resultScreen = document.querySelector('.result-screen');

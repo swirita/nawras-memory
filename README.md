@@ -64,14 +64,18 @@ there is no account or backend service.
 - `src/styles.css`: shared logo-sampled navy, cyan, mint, and purple; existing
   system typography, pale blue background, and gold primary buttons. Desktop
   uses four columns and three rows; portrait mobile uses three columns and four
-  rows. Cards keep a 3:4 portrait ratio, sized from both the available height
+  rows. Cards keep a 4:5 portrait ratio, sized from both the available height
   and width below the compact timer, moves, and reset bar. The centered board
   reserves room for hover, shadows, and keyboard focus. Absolutely positioned
   visual layers keep images and transforms outside grid sizing; a clipped
   board viewport prevents perspective overflow from creating scrollbars.
-  Backs use a light gradient, inset line, and faint curved corner accents;
-  successful matches use a cyan glow without changing the footprint.
-  Reduced motion removes entrance, flips, and decorative motion.
+  Backs use a navy-to-blue gradient, a thin cyan inset line, and cropped cyan
+  and lavender contours. A diffuse light center preserves readability of the
+  original logo. Hover and focus use stationary cyan outlines and glows;
+  successful matches briefly show a gold border and small sparkle before
+  settling to a restrained cyan glow, without changing the footprint.
+  Reduced motion removes entrance, flips, and decorative motion, and uses
+  a static gold match highlight.
 - `src/particles.js`: sparse landing particles and their lifecycle. They pause
   while gameplay or results are displayed and resume on returning to Start.
 - `vite.config.js`: preserved `base: './'` for GitHub Pages repository subpaths.
@@ -131,5 +135,10 @@ through delayed image loading, entry animation, every card flip, 12 deliberate
 mismatches, and matching pairs at desktop, mobile, small mobile, and landscape
 sizes. All samples keep their positions and dimensions, with no page overflow
 or scrolling. Both faces have identical dimensions and hidden backfaces;
-all tested cards maintain 3:4 proportions. Timer and move values have reserved
+all tested cards maintain 4:5 proportions. Timer and move values have reserved
 widths so changing digits cannot nudge neighboring controls.
+
+The navy-card update was checked at desktop, 1280x720 laptop, portrait mobile,
+small mobile, and landscape sizes. Hover keeps the visual layer stationary;
+keyboard focus stays clearly outlined. Gold match effects, reduced motion,
+reset confirmation, and the existing completion sequence were checked.
