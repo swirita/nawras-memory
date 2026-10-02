@@ -3,36 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
     <meta name="description" content="Nawras Memory — a playful matching game from NawrasEdu. Gameplay is coming next." />
     <title>Nawras Memory | NawrasEdu</title>
   </head>
   <body>
-    <header class="site-header">
-      <div class="brand" id="header-brand" aria-label="NawrasEdu"></div>
-      <span class="header-note">A little play. A little discovery.</span>
-    </header>
     <main>
+      <div class="landing-decoration" aria-hidden="true">
+        <svg class="landing-particles" xmlns="http://www.w3.org/2000/svg" focusable="false"></svg>
+      </div>
       <section class="landing" aria-labelledby="landing-title">
+        <div class="brand" id="landing-brand"></div>
         <div class="landing-copy">
-          <p class="eyebrow">LEARN THROUGH PLAY</p>
-          <h1 id="landing-title">Nawras Memory</h1>
-          <p class="intro">A curious mind. A good memory.<br />A world of things to discover.</p>
-          <p class="description">Get ready to find matching pictures from the world of technology and ideas.</p>
-          <dl class="round-details" aria-label="Upcoming game details">
-            <div><dt>Matching pairs</dt><dd id="pair-count">6</dd></div>
-            <div><dt>Seconds to play</dt><dd id="round-duration">60</dd></div>
-          </dl>
-          <button class="start-button" type="button" disabled aria-describedby="coming-next">Start — coming next</button>
-          <p class="coming-next" id="coming-next">The matching adventure is on its way.</p>
+          <h1 id="landing-title"><span>Nawras</span> <span class="memory-title">Memory</span></h1>
         </div>
-        <figure class="card-preview" aria-label="Preview of a NawrasEdu card back and matching picture">
-          <div class="preview-card preview-back" id="card-back-preview"></div>
-          <div class="preview-card preview-front" id="pair-preview"></div>
-          <figcaption>A familiar face in every round.</figcaption>
-        </figure>
+        <div class="player-entry">
+          <label for="player-name">Enter your name</label>
+          <input id="player-name" name="playerName" type="text" autocomplete="given-name" maxlength="40" aria-describedby="player-name-hint" />
+          <span id="player-name-hint" class="sr-only">Your name will identify your time when gameplay is available.</span>
+          <button class="start-button" type="button" disabled title="Gameplay is coming next">Start</button>
+        </div>
       </section>
     </main>
-    <footer>Made for curious minds · NawrasEdu</footer>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
