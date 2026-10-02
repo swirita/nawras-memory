@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:," />
-    <meta name="description" content="Nawras Memory — a playful matching game from NawrasEdu. Gameplay is coming next." />
+    <meta name="description" content="Nawras Memory — find six pairs in 60 seconds in a playful matching game from NawrasEdu." />
     <title>Nawras Memory | NawrasEdu</title>
   </head>
   <body>
@@ -19,9 +19,10 @@
         </div>
         <div class="player-entry">
           <label for="player-name">Enter your name</label>
-          <input id="player-name" name="playerName" type="text" autocomplete="given-name" maxlength="40" aria-describedby="player-name-hint" />
-          <span id="player-name-hint" class="sr-only">Your name will identify your time when gameplay is available.</span>
-          <button class="start-button" type="button" disabled title="Gameplay is coming next">Start</button>
+          <input id="player-name" name="playerName" type="text" autocomplete="given-name" maxlength="40" required aria-describedby="player-name-hint player-name-error" />
+          <span id="player-name-hint" class="sr-only">Enter a name for your results and this browser’s leaderboard. Find six pairs in 60 seconds.</span>
+          <span id="player-name-error" class="name-error" role="status" hidden>Enter your name to start.</span>
+          <button class="start-button" type="button">Start</button>
         </div>
       </section>
     </main>

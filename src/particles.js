@@ -3,9 +3,6 @@ export function createLandingParticles(svg, landing) {
   const ns = 'http://www.w3.org/2000/svg';
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const mobile = matchMedia('(max-width: 600px)');
-  const styles = getComputedStyle(document.documentElement);
-  const palette = ['--brand-cyan', '--brand-purple', '--brand-navy']
-    .map(name => styles.getPropertyValue(name).trim());
   const make = (tag, attrs, parent) => {
     const node = document.createElementNS(ns, tag);
     for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
@@ -17,7 +14,6 @@ export function createLandingParticles(svg, landing) {
   const clip = make('clipPath', { id: 'landing-quiet-clip', clipPathUnits: 'userSpaceOnUse' }, defs);
   const clipShape = make('path', { 'clip-rule': 'evenodd', 'fill-rule': 'evenodd' }, clip);
   const decoration = make('g', { 'clip-path': 'url(#landing-quiet-clip)' }, svg);
-  let groups = [];
   let width = 0;
   let height = 0;
   let disposed = false;
@@ -64,46 +60,6 @@ export function createLandingParticles(svg, landing) {
       `H ${left + r} Q ${left} ${bottom} ${left} ${bottom - r} ` +
       `V ${top + r} Q ${left} ${top} ${left + r} ${top} Z`);
     decoration.replaceChildren();
-    for (const group of groups) group.path.remove();
-    groups = [];
-
-    function ribbon(x, y, scaleX, scaleY, rotation, color, count, opacity, period, shape = 'contour') {
-      const id = `landing-ribbon-${groups.length}`;
-      const path = make('path', { id, d: shape === 'sweep'
-        ? 'M -260 440 C -70 100 80 70 250 210 S 440 360 580 125 S 760 45 940 170'
-        : 'M -180 140 C 10 35 155 350 310 185 S 465 5 720 105' }, defs);
-      const layer = make('g', {
-        transform: `translate(${x} ${y}) rotate(${rotation}) scale(${scaleX} ${scaleY})`,
-        fill: 'none', stroke: color, 'stroke-width': 0.75, opacity,
-      }, decoration);
-      const motion = make('g', {
-        class: 'landing-contour-motion',
-        style: `--period:${period}s;--delay:-${groups.length * 7}s;--drift-x:${groups.length % 2 ? -3 : 3}px;--drift-y:2px`,
-      }, layer);
-      for (let i = 0; i < count; i++) {
-        const spread = i / (count - 1);
-        // A shared waist makes the lighter wave fan out and converge, as in
-        // the ribbon reference, without adding geometry updates for each line.
-        const transform = shape === 'sweep'
-          ? `translate(${i * 0.8} 200) scale(1 ${0.55 + spread * 0.95}) translate(0 -200)`
-          : `translate(${i * 3.5} ${i * 5.2}) scale(${1 + spread * 0.06} 1)`;
-        make('use', {
-          href: `#${id}`, transform,
-          'vector-effect': 'non-scaling-stroke',
-        }, motion);
-      }
-      groups.push({ path });
-    }
-
-    if (mobile.matches) {
-      // Two different formations above and below the content, rather than
-      // a shrunken desktop layout. The vector clip keeps the center clear.
-      ribbon(-width * 0.42, -35, width / 650, 0.65, -20, palette[0], 19, 0.3, 24);
-      ribbon(width * 0.2, Math.max(quiet.bottom + 12, height - 240), width / 620, 0.58, -14, palette[1], 17, 0.23, 28, 'sweep');
-    } else {
-      ribbon(-width * 0.2, -25, width / 1250, height / 1050, -18, palette[0], 32, 0.3, 24);
-      ribbon(width * 0.6, Math.max(height * 0.66, quiet.bottom + 12), width / 1500, height / 1350, -18, palette[1], 23, 0.24, 28, 'sweep');
-    }
     // Stable positions avoid random jumps when a viewport or the logo resizes.
     // The same quiet-area clip protects text and controls throughout each drift.
     const positions = [
