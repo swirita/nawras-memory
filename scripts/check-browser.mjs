@@ -85,8 +85,8 @@ try {
   await p.clock.runFor(400);
   assert.equal(await p.locator('#result-number').innerText(),'1.23');
   assert.equal(await p.locator('#result-moves').innerText(),'6');
-  assert.equal(await p.locator('.result-screen .leaderboard-row').count(),5);
-  assert.deepEqual(await p.locator('.result-screen .leaderboard-rank').allTextContents(),['1','1','1','4','5']);
+  assert.equal(await p.locator('.result-screen .leaderboard-row').count(),10);
+  assert.deepEqual((await p.locator('.result-screen .leaderboard-rank').allTextContents()).slice(0,5),['1','1','1','4','5']);
   const savedSolo = await stored(p,soloKey);
   assert.ok(savedSolo.some(record=>record.name==='Release A' && record.elapsedMs===1230 && record.moves===6));
   await p.reload(); await p.clock.pauseAt(await p.evaluate(() => Date.now()));

@@ -146,10 +146,15 @@ main.landing-active {
   text-transform: uppercase;
   color: var(--text-heading);
 }
-.landing h1 span { display: block; }
+.landing h1 span { display: block; padding-bottom: 8px; }
+.landing h1 > span:first-child {
+  text-shadow: 0 1px 0 #fff, 0 2px 0 #fff, 0 3px 0 #fff,
+    0 4px 0 #fff, 0 5px 0 #fff, 0 6px 0 #fff, 0 7px 0.7px #fff;
+}
 .landing h1 .memory-title {
   color: var(--text-accent);
-  text-shadow: 0 3px 0 #08627b, 0 10px 28px rgb(40 185 227 / 12%);
+  text-shadow: 0 1px 0 #08627b, 0 2px 0 #08627b, 0 3px 0 #08627b,
+    0 4px 0 #08627b, 0 5px 0 #08627b, 0 6px 0 #08627b, 0 7px 0.7px #08627b;
 }
 .player-entry {
   display: flex;
@@ -379,14 +384,16 @@ main.round-active {
 /* Keep results scrollable on small screens without displaying scrollbars. */
 html:has(.result-screen:not([hidden])),
 .result-screen .leaderboard-list { scrollbar-width: none; }
-.result-screen .leaderboard-list { scrollbar-gutter: auto; }
+.result-screen .leaderboard-list { scrollbar-gutter: auto; max-height: min(240px, 30dvh); }
 html:has(.result-screen:not([hidden]))::-webkit-scrollbar,
 .result-screen .leaderboard-list::-webkit-scrollbar { display: none; }
 .leaderboard-list:focus-visible { outline: 2px solid var(--brand-cyan); outline-offset: 3px; }
 .leaderboard-summary { margin: -2px 0 10px; font-size: 0.72rem; color: var(--text-support); }
 .leaderboard-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 48px; padding: 7px 12px; background: rgb(40 185 227 / 6%); }
 .leaderboard-row + .leaderboard-row { border-top: 1px solid rgb(8 37 88 / 6%); }
-.leaderboard-row.is-current { background: rgb(40 185 227 / 13%); box-shadow: inset 3px 0 0 rgb(40 185 227 / 65%); }
+.leaderboard-row.is-current { background: rgb(40 185 227 / 19%); box-shadow: inset 4px 0 0 var(--brand-cyan); }
+.leaderboard-row.is-current .leaderboard-rank { color: var(--brand-navy); font-weight: 900; }
+.leaderboard-current-label { margin-left: 6px; color: var(--text-accent); font-size: 0.65rem; font-weight: 800; }
 .leaderboard-row.is-top-five { background: linear-gradient(100deg, rgb(239 191 85 / 14%), rgb(40 185 227 / 8%)); }
 .leaderboard-row.is-top-five.is-current { background: linear-gradient(100deg, rgb(239 191 85 / 18%), rgb(40 185 227 / 14%)); }
 .leaderboard-row.is-top-five .leaderboard-rank { display: grid; place-items: center; min-height: 24px; border-radius: 6px; color: var(--brand-navy); background: rgb(239 191 85 / 30%); font-weight: 850; }

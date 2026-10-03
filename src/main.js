@@ -3,7 +3,7 @@ import { assetUrl, gameConfig } from './config.js';
 import { createMemoryGame } from './game.js';
 import { createGameAudio } from './audio.js';
 import { createLandingParticles } from './particles.js';
-import { createLeaderboard, normalizePlayerName, playerKey, formatCompletionTime } from './leaderboard.js';
+import { createLeaderboard, normalizePlayerName, formatCompletionTime } from './leaderboard.js';
 import { createWinCelebration } from './celebration.js';
 import { createExpoIdle } from './idle.js';
 import { createModeSwitcher } from './mode-switch.js';
@@ -164,6 +164,7 @@ const multiplayerLeaderboard = createLeaderboard(gameConfig, storage, 'multiplay
 let mode = 'solo';
 let lastStartingPlayer;
 let currentWinnerName = '';
+let currentEntryId;
 let menuLeaderboardMode = 'solo';
 const activeLeaderboard = () => mode === 'multiplayer' ? multiplayerLeaderboard : leaderboard;
 let idleFocus;
@@ -283,7 +284,7 @@ const game = createMemoryGame(gameConfig, state => {
   } else showResult(state);
 }, kind => { if (kind !== 'won') audio.play(kind); });
 
-function renderLeaderboard(root = resultScreen.querySelector('.leaderboard'), boardMode = mode, showAll = false) {
+function renderLeaderboard(root = resultScreen.querySelector('.leaderboard'), boardMode = mode, showAll = true) {
   const currentLeaderboard = boardMode === 'multiplayer' ? multiplayerLeaderboard : leaderboard;
   const records = showAll ? currentLeaderboard.rankedAll() : currentLeaderboard.rankedTop();
   const list = root.querySelector('.leaderboard-list');
@@ -292,8 +293,9 @@ function renderLeaderboard(root = resultScreen.querySelector('.leaderboard'), bo
   list.replaceChildren(...records.map(record => {
     const row = document.createElement('li');
     row.className = 'leaderboard-row';
+    row.dataset.entryId = record.id;
     row.classList.toggle('is-top-five', record.rank <= 5);
-    if (root.closest('.result-screen') && playerKey(record.name) === playerKey(boardMode === 'multiplayer' ? currentWinnerName : playerName)) {
+    if (root.closest('.result-screen') && record.id === currentEntryId) {
       row.classList.add('is-current');
       row.setAttribute('aria-current', 'true');
     }
@@ -305,6 +307,13 @@ function renderLeaderboard(root = resultScreen.querySelector('.leaderboard'), bo
     name.className = 'leaderboard-name';
     name.textContent = record.name;
     name.title = record.name;
+    if (row.classList.contains('is-current')) {
+      const label = document.createElement('span');
+      label.className = 'leaderboard-current-label';
+      label.textContent = 'YOU';
+      name.append(label);
+      rank.setAttribute('aria-label', `Your rank: ${record.rank}${record.rank <= 5 ? ', top 5' : ''}`);
+    }
     const stats = document.createElement('span');
     stats.className = 'leaderboard-value';
     const time = document.createElement('strong');
@@ -331,10 +340,18 @@ function renderLeaderboard(root = resultScreen.querySelector('.leaderboard'), bo
   }
   summary.textContent = `${records.length} ${records.length === 1 ? 'participant' : 'participants'} · Top 5 ranks highlighted`;
   summary.hidden = !showAll || records.length === 0;
+  const currentRow = list.querySelector('.is-current');
+  if (currentRow) {
+    // Measure after the result is visible. Only change this list's scroll
+    // position; scrollIntoView would also move the results page and ancestors.
+    const listBounds = list.getBoundingClientRect();
+    const rowBounds = currentRow.getBoundingClientRect();
+    list.scrollTop = rowBounds.top - listBounds.top - (list.clientHeight - rowBounds.height) / 2;
+  }
 }
 
 function showResult(state) {
-  activeLeaderboard().save(state, playerName);
+  currentEntryId = activeLeaderboard().save(state, playerName);
   const won = state.status === 'won';
   const multiplayer = state.mode === 'multiplayer';
   celebration.cancel();

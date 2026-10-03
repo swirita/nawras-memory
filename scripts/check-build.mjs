@@ -10,6 +10,8 @@ for (const path of images) {
   assert.deepEqual(await readFile(`dist/${path}`), await readFile(`public/${path}`), `Changed image: ${path}`);
 }
 const html = await readFile('dist/index.html', 'utf8');
+assert.ok(html.includes('<title>Nawras Memory</title>'));
+assert.ok(html.includes('href="/nawras-memory/assets/branding/nawras-small.png"'));
 const references = [...html.matchAll(/(?:src|href)="(\/nawras-memory\/[^"?#]+)"/g)].map(match => match[1]);
 assert.ok(references.some(path => path.endsWith('.js')), 'Missing built script');
 assert.ok(references.some(path => path.endsWith('.css')), 'Missing built styles');

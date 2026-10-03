@@ -184,3 +184,18 @@ test('names are trimmed and length limited without treating text as markup', () 
   assert.equal(normalizePlayerName('a'.repeat(100)).length, 40);
   assert.equal(normalizePlayerName('  <script>hi</script>  '), '<script>hi</script>');
 });
+
+test('saved entry IDs persist, target retained personal bests, and distinguish duplicate names', () => {
+  const store = storage();
+  const board = createLeaderboard(gameConfig, store);
+  const id = board.save(round(1000), 'Same name');
+  assert.ok(id);
+  assert.equal(board.save(round(2000), 'SAME NAME'), id);
+  assert.equal(board.rankedAll()[0].id, id);
+  const duplicateId = 'different-player';
+  assert.equal(board.save(round(3000), 'Same name', duplicateId), duplicateId);
+  assert.deepEqual(board.rankedAll().map(record => record.id), [id, duplicateId]);
+  assert.deepEqual(createLeaderboard(gameConfig, store).rankedAll().map(record => record.id), [id, duplicateId]);
+  assert.equal(board.save(round(2500), 'Same name', duplicateId), duplicateId);
+  assert.equal(board.rankedAll()[1].elapsedMs, 2500);
+});

@@ -21,6 +21,8 @@ export function createLeaderboard(config, storage, mode = 'solo') {
   let persistent = true;
   let ignoreStorage = false;
   const savedRounds = new WeakSet();
+  // Deterministic IDs migrate legacy personal bests consistently across tabs.
+  const legacyId = name => `legacy:${mode}:${encodeURIComponent(playerKey(name))}`;
   function valid(record) {
     if (!record || !normalizePlayerName(record.name, config.playerNameMaxLength)) return false;
     if (multiplayer) return Number.isInteger(record.score) && record.score > config.pairs.length / 2 && record.score <= config.pairs.length;
@@ -35,7 +37,8 @@ export function createLeaderboard(config, storage, mode = 'solo') {
         ? { name: normalizePlayerName(value.name, config.playerNameMaxLength), score: value.score }
         : { name: normalizePlayerName(value.name, config.playerNameMaxLength), elapsedMs: value.elapsedMs,
           ...(value.moves === undefined ? {} : { moves: value.moves }) };
-      const key = playerKey(record.name);
+      record.id = typeof value.id === 'string' && value.id ? value.id : legacyId(record.name);
+      const key = record.id;
       if (!best.has(key) || compare(record, best.get(key)) < 0) best.set(key, record);
     }
     // Stable sorting preserves stored order without assigning tied players a
@@ -50,7 +53,7 @@ export function createLeaderboard(config, storage, mode = 'solo') {
     } catch { return []; }
   }
   records = read();
-  function save(round, name) {
+  function save(round, name, entryId) {
     if ((round.mode === 'multiplayer') !== multiplayer) return;
     if (round.status !== 'won' || round.pairsFound !== config.pairs.length || savedRounds.has(round.cards)) return;
     let candidate;
@@ -67,9 +70,14 @@ export function createLeaderboard(config, storage, mode = 'solo') {
     if (!valid(candidate)) return;
     savedRounds.add(round.cards);
     // Merge fresh storage so another tab's records are not discarded.
-    records = merge([...records, ...read(), candidate]);
+    const fresh = merge([...records, ...read()]);
+    // Keep the existing one-best-per-name behavior unless a caller supplies a
+    // distinct identity. Return the retained best's ID even for a slower round.
+    candidate.id = entryId || fresh.find(record => playerKey(record.name) === playerKey(candidate.name))?.id || globalThis.crypto.randomUUID();
+    records = merge([...fresh, candidate]);
     try { storage.setItem(storageKey, JSON.stringify(records)); }
     catch { persistent = false; }
+    return candidate.id;
   }
   function rankedAll() {
     let rank = 1;
@@ -93,6 +101,7 @@ export function createLeaderboard(config, storage, mode = 'solo') {
       return false;
     }
   }
-  return { save, clear, top: () => records.slice(0, 5), rankedAll,
+  // Preserve the legacy unranked API shape; ranked entries include their IDs.
+  return { save, clear, top: () => records.slice(0, 5).map(({ id, ...record }) => record), rankedAll,
     rankedTop: () => rankedAll().slice(0, 5), isPersistent: () => persistent };
 }
