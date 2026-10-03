@@ -376,6 +376,12 @@ main.round-active {
 .leaderboard { margin: 20px 0; text-align: left; }
 .leaderboard h3 { margin: 0 0 8px; color: var(--brand-navy); font-size: 0.72rem; letter-spacing: 0.17em; font-weight: 800; }
 .leaderboard-list { list-style: none; margin: 0; padding: 0; border-radius: 12px; max-height: min(360px, 40dvh); min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: #70b8d2 #eaf3f9; }
+/* Keep results scrollable on small screens without displaying scrollbars. */
+html:has(.result-screen:not([hidden])),
+.result-screen .leaderboard-list { scrollbar-width: none; }
+.result-screen .leaderboard-list { scrollbar-gutter: auto; }
+html:has(.result-screen:not([hidden]))::-webkit-scrollbar,
+.result-screen .leaderboard-list::-webkit-scrollbar { display: none; }
 .leaderboard-list:focus-visible { outline: 2px solid var(--brand-cyan); outline-offset: 3px; }
 .leaderboard-summary { margin: -2px 0 10px; font-size: 0.72rem; color: var(--text-support); }
 .leaderboard-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 48px; padding: 7px 12px; background: rgb(40 185 227 / 6%); }
