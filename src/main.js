@@ -7,6 +7,10 @@ import { createLeaderboard, normalizePlayerName, playerKey, formatCompletionTime
 import { createWinCelebration } from './celebration.js';
 import { createExpoIdle } from './idle.js';
 import { createModeSwitcher } from './mode-switch.js';
+import { createFullscreenShortcut } from './fullscreen.js';
+
+const fullscreen = createFullscreenShortcut();
+if (import.meta.hot) import.meta.hot.dispose(() => fullscreen.dispose());
 
 // Only attach successfully loaded images to the DOM, avoiding broken-image icons.
 // This text fallback is a label, never a replacement logo or fabricated asset.
@@ -578,5 +582,5 @@ document.querySelectorAll('[data-leaderboard-mode]').forEach(tab => {
   });
 });
 idleDialog.addEventListener('cancel', event => { event.preventDefault(); idle.activity(); });
-window.addEventListener('pagehide', () => { backToStart(); idle.stop(); });
+window.addEventListener('pagehide', () => { fullscreen.dispose(); backToStart(); idle.stop(); });
 window.addEventListener('pageshow', event => { if (event.persisted) window.location.reload(); });
