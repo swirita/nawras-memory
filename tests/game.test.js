@@ -3,6 +3,127 @@ import assert from 'node:assert/strict';
 import { createMemoryGame } from '../src/game.js';
 import { gameConfig } from '../src/config.js';
 
+test('multiplayer turn remains locked until cards finish flipping back; reset cancels that transition', () => roundCheck(r => {
+  r.game.start({ mode: 'multiplayer', players: ['A', 'B'], startingPlayer: 0, turnTransitionMs: 220 });
+  r.mismatch();
+  r.advance(900);
+  assert.equal(r.state.cards.filter(c => c.revealed).length, 0);
+  assert.equal(r.state.activePlayer, 0);
+  assert.equal(r.state.locked, true);
+  r.game.select(0);
+  assert.equal(r.state.selected.length, 0);
+  r.advance(219);
+  assert.equal(r.state.activePlayer, 0);
+  r.advance(1);
+  assert.equal(r.state.activePlayer, 1);
+  assert.equal(r.state.locked, false);
+  r.mismatch(); r.advance(900);
+  const callbacks = [...r.callbacks.values()].map(value => value.fn);
+  r.game.start({ mode: 'multiplayer', players: ['A', 'B'], startingPlayer: 0 });
+  callbacks.forEach(fn => fn());
+  assert.equal(r.state.activePlayer, 0);
+  assert.equal(r.state.moves, 0);
+  assert.equal(r.outcomes.length, 0);
+}));
+
+test('multiplayer awards one point, blocks rapid clicks, grants bonus turns, and has no time limit', () => roundCheck(r => {
+  r.game.start({ mode: 'multiplayer', players: ['A', 'B'], startingPlayer: 1 });
+  r.advance(120000);
+  assert.equal(r.state.status, 'playing');
+  r.indices('nawras').forEach(r.game.select);
+  for (let i = 0; i < 12; i++) r.game.select(i);
+  assert.deepEqual(r.state.scores, [0, 1]);
+  assert.equal(r.state.moves, 1);
+  assert.equal(r.state.activePlayer, 1);
+  assert.equal(r.state.locked, true);
+  r.advance(gameConfig.matchResolutionMs);
+  assert.equal(r.state.locked, false);
+  assert.equal(r.state.activePlayer, 1);
+  r.indices('python').forEach(r.game.select);
+  r.advance(gameConfig.matchResolutionMs);
+  assert.deepEqual(r.state.scores, [0, 2]);
+}));
+
+test('multiplayer switches players only after the full mismatch delay; pause preserves the turn', () => roundCheck(r => {
+  r.game.start({ mode: 'multiplayer', players: ['A', 'B'], startingPlayer: 0 });
+  r.mismatch();
+  r.advance(400);
+  r.game.pause();
+  r.advance(10000);
+  assert.equal(r.state.activePlayer, 0);
+  r.game.resume();
+  r.advance(499);
+  assert.equal(r.state.activePlayer, 0);
+  assert.equal(r.state.cards.filter(c => c.revealed).length, 2);
+  r.advance(1);
+  assert.equal(r.state.activePlayer, 1);
+  assert.equal(r.state.cards.filter(c => c.revealed).length, 0);
+  assert.deepEqual(r.state.scores, [0, 0]);
+}));
+
+test('multiplayer supports all winning scores and a 3–3 draw', () => roundCheck(r => {
+  for (const firstScore of [3, 4, 6]) {
+    r.game.start({ mode: 'multiplayer', players: ['A', 'B'], startingPlayer: 0 });
+    for (const pair of gameConfig.pairs.slice(0, firstScore)) {
+      r.indices(pair.id).forEach(r.game.select);
+      r.advance(gameConfig.matchResolutionMs);
+    }
+    if (firstScore < 6) {
+      const remaining = r.state.cards.flatMap((c, i) => !c.matched ? [i] : []);
+      r.game.select(remaining[0]);
+      r.game.select(remaining.find(i => r.state.cards[i].id !== r.state.cards[remaining[0]].id));
+      r.advance(gameConfig.mismatchRevealDelayMs);
+      for (const pair of gameConfig.pairs.slice(firstScore)) {
+        r.indices(pair.id).forEach(r.game.select);
+        r.advance(gameConfig.matchResolutionMs);
+      }
+    }
+    const result = r.outcomes.at(-1);
+    assert.deepEqual(result.scores, [firstScore, 6 - firstScore]);
+    assert.equal(result.winner, firstScore === 3 ? null : 0);
+    assert.equal(r.callbacks.size, 0);
+  }
+  // Give player B the first pair, then switch and let A take the other five.
+  r.game.start({ mode: 'multiplayer', players: ['A', 'B'], startingPlayer: 1 });
+  r.indices('nawras').forEach(r.game.select); r.advance(gameConfig.matchResolutionMs);
+  const remaining = r.state.cards.flatMap((c, i) => !c.matched ? [i] : []);
+  r.game.select(remaining[0]);
+  r.game.select(remaining.find(i => r.state.cards[i].id !== r.state.cards[remaining[0]].id));
+  r.advance(gameConfig.mismatchRevealDelayMs);
+  for (const pair of gameConfig.pairs.slice(1)) { r.indices(pair.id).forEach(r.game.select); r.advance(gameConfig.matchResolutionMs); }
+  assert.deepEqual(r.outcomes.at(-1).scores, [5, 1]);
+}));
+
+test('multiplayer reset and mode changes invalidate retained callbacks and clear round state', () => roundCheck(r => {
+  r.game.start({ mode: 'multiplayer', players: ['A', 'B'], startingPlayer: 0 });
+  r.mismatch();
+  const stale = [...r.callbacks.values()].map(value => value.fn);
+  r.game.pause();
+  r.game.start({ mode: 'multiplayer', players: ['A', 'B'], startingPlayer: 1 });
+  stale.forEach(fn => fn());
+  assert.equal(r.state.activePlayer, 1);
+  assert.deepEqual(r.state.scores, [0, 0]);
+  assert.equal(r.state.moves, 0);
+  assert.equal(r.state.cards.filter(c => c.revealed).length, 0);
+  r.mismatch();
+  const old = [...r.callbacks.values()].map(value => value.fn);
+  r.game.stop(); r.game.start(); old.forEach(fn => fn());
+  assert.equal(r.state.mode, 'solo');
+  assert.equal(r.state.remainingSeconds, 60);
+  assert.equal(r.outcomes.length, 0);
+}));
+
+test('multiplayer chooses a random starter and accepts the alternate starter for rematches', () => roundCheck(r => {
+  const before = r.randomCalls();
+  r.game.start({ mode: 'multiplayer', players: ['A', 'B'] });
+  assert.equal(r.randomCalls() - before, 12);
+  const first = r.state.startingPlayer;
+  assert.ok(first === 0 || first === 1);
+  r.game.start({ mode: 'multiplayer', players: ['A', 'B'], startingPlayer: 1 - first });
+  assert.equal(r.state.activePlayer, 1 - first);
+  assert.deepEqual(r.state.scores, [0, 0]);
+}));
+
 // A deterministic scheduler verifies boundary timing without waiting a minute.
 function roundCheck(check) {
   const original = { now: Date.now, setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout, random: Math.random };

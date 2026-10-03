@@ -19,7 +19,8 @@ there are no runtime dependencies.
 
 ## Play
 
-Enter a name and press Start. Names are trimmed and limited to 40 characters.
+Choose Solo or 2 Players and enter the required names, then press Start.
+Names are trimmed and limited to 40 characters. Solo retains its timed round.
 The face-down cards arrive in a short,
 660ms stagger; selection and the 60-second countdown begin afterward. Reduced
 motion starts immediately. Find all six pairs before time runs out.
@@ -34,10 +35,54 @@ countdown and any pending mismatch. Cancel or Escape resumes the same round.
 Reset reshuffles and replays the entrance. Play Again starts a fresh round
 with the same player; New Player returns to an empty name entry.
 Results emphasize completion seconds for wins or pairs found for time-up
-rounds, with moves below. The browser-local Top 5 keeps each player's best
-completed round, ranked by full-precision completion time and then moves.
+rounds, with moves below. The browser-local leaderboard keeps each player's best
+completed round, ranked by completion time at the displayed 0.01-second
+precision and then moves. Exact ties share standard competition ranks (1, 1,
+3) and retain stable stored order. Legacy records with missing moves retain
+that unknown value and their relative order when a comparison cannot be made.
 Unfinished rounds are excluded. Names and records stay in this browser;
 there is no account or backend service.
+
+2 Players uses the same six pairs without a time limit. The first starter is
+random. Matches award one point and another turn; misses switch players only
+after the 900ms reveal delay. The cyan and lavender score panels identify the
+current turn. A completed round celebrates before showing the winner and both
+scores, or a 3–3 draw. Only winners are saved, using their 4, 5, or 6 pairs.
+The separate multiplayer leaderboard keeps one personal best per player; equal
+scores share ranks without time or moves breaking ties. Rematch keeps both
+names and alternates the previous starting player. Home cancels the round.
+Reset confirmation pauses pending resolution and celebration callbacks;
+confirming reset cancels them and starts a clean board. Results are saved once
+when the result screen opens; abandoned rounds and reset celebrations are not
+saved. Multiplayer records use `nawras-memory.multiplayer.leaderboard.v1`,
+while existing Solo records retain `nawras-memory.leaderboard.v1`.
+
+The setup form fades out and in over 250ms when changing modes, with reserved
+space and a sliding selection indicator. Names are centered in setup and in
+the equal-width player panels above the board. Multiplayer crossfades soft
+cyan/lavender full-screen tints over 500ms, synchronized with the active player
+after mismatched cards finish their reverse flip. Solo retains its background.
+Reduced motion removes these transitions. The start menu's Leaderboard button
+opens all saved participants with Solo/2 Players tabs and a Back button.
+Both menu and result leaderboards show all eligible records in a bounded,
+scrollable list. The top five ranks are highlighted, including everyone tied
+at the cutoff; tied display order never changes a player's rank. Back, tabs,
+and Clear leaderboard remain outside the list so they stay accessible while
+scrolling. The list supports pointer, touch, and keyboard scrolling.
+Clear leaderboard removes all saved scores for the selected tab after
+confirmation; the other mode's records stay intact. Cancel or Escape leaves
+scores untouched. Cleared scores stay removed after refreshing the page.
+
+Expo inactivity is independent of the round timer. At 60 seconds without real
+pointer, touch, or keyboard activity, an overlay counts down “Next player in
+10…” through 1. Continue playing or any interaction dismisses it and starts
+a fresh inactivity deadline; the dismissing gesture is consumed. At 70 seconds,
+the app returns to setup, clears names and round state, closes dialogs, and
+cancels pending callbacks. The start menu never shows the overlay; stale setup
+names are silently cleared at the same deadline. Automatic navigation, turn
+changes, animation, sound, and synthetic events do not reset inactivity. Solo
+time continues while the overlay is open. Previously saved results are kept;
+unfinished rounds are never saved.
 
 ## Implementation
 
@@ -57,6 +102,10 @@ there is no account or backend service.
 - `src/leaderboard.js`: validated localStorage records, safe name normalization,
   one personal best per player, precision sorting, and once-per-round saving.
   Unavailable storage falls back to records for the current session.
+- `src/idle.js`: one independent inactivity/countdown deadline, throttled
+  movement tracking, consumed dismissal gestures, and navigation cleanup.
+- `src/mode-switch.js`: cancelable form transitions; only the latest requested
+  mode commits, with immediate updates for reduced motion.
 - `src/audio.js`: soft synthesized flip, match, mismatch, win, and expiry tones.
   One audio context unlocks after interaction; completed nodes disconnect.
   Invalid selections emit no sound, flip cues are throttled, and new cues fade
@@ -69,9 +118,9 @@ there is no account or backend service.
   reserves room for hover, shadows, and keyboard focus. Absolutely positioned
   visual layers keep images and transforms outside grid sizing; a clipped
   board viewport prevents perspective overflow from creating scrollbars.
-  Backs use a navy-to-blue gradient, a thin cyan inset line, and cropped cyan
-  and lavender contours. A diffuse light center preserves readability of the
-  original logo. Hover and focus use stationary cyan outlines and glows;
+  Backs use layered navy glass gradients, a thin cyan inset line, and cropped
+  cyan and lavender contours. The light logo sits directly on the navy base;
+  revealed faces use a pale frosted gradient. Hover and focus use stationary cyan outlines and glows;
   successful matches briefly show a gold border and small sparkle before
   settling to a restrained cyan glow, without changing the footprint.
   Reduced motion removes entrance, flips, and decorative motion, and uses
@@ -84,11 +133,13 @@ there is no account or backend service.
 
 Original logo files are preserved, including transparency and proportions.
 Images use contain sizing without stretching or cropping. The name logo has
-no surrounding frame. Every card back uses `nawras-name.png`.
+no surrounding frame. Every card back uses `light-nawras.png`, with its visible
+artwork centered to account for transparent padding.
 
 | Asset in public/assets | Purpose |
 | --- | --- |
-| branding/nawras-name.png | Landing, result header, and all card backs |
+| branding/nawras-name.png | Landing and result header |
+| branding/light-nawras.png | All card backs |
 | branding/nawras-small.png | NawrasEdu pair |
 | cards/python.png | Python pair; existing conversion of supplied WebP |
 | cards/robot.png | Robot pair; existing conversion of supplied WebP |
@@ -107,7 +158,7 @@ Missing images display a readable text fallback rather than a broken icon.
 covering matching, repeated and rapid selections, the exact mismatch delay,
 winning, deadline expiry during a mismatch, late timer delivery, entrance
 timing, pause/cancel, repeated resets, stale callbacks, sound events, and elapsed
-time excluding pauses. The 21 tests also cover frozen winning time,
+time excluding pauses. The 42 tests also cover frozen winning time,
 celebration timing/cancellation/reduced motion, leaderboard precision,
 personal-best updates, persistence, safe names, and storage failure.
 No test dependencies are needed.
@@ -135,10 +186,24 @@ through delayed image loading, entry animation, every card flip, 12 deliberate
 mismatches, and matching pairs at desktop, mobile, small mobile, and landscape
 sizes. All samples keep their positions and dimensions, with no page overflow
 or scrolling. Both faces have identical dimensions and hidden backfaces;
-all tested cards maintain 4:5 proportions. Timer and move values have reserved
+all tested cards maintain 9:10 proportions. Timer and move values have reserved
 widths so changing digits cannot nudge neighboring controls.
 
 The navy-card update was checked at desktop, 1280x720 laptop, portrait mobile,
 small mobile, and landscape sizes. Hover keeps the visual layer stationary;
 keyboard focus stays clearly outlined. Gold match effects, reduced motion,
 reset confirmation, and the existing completion sequence were checked.
+
+Two-player browser checks cover bonus turns, delayed turn switching, rapid
+clicks, winner-only saving, 3–3 draws, shared ranks, alternate rematch starters,
+reset during mismatch and celebration, Home cancellation, and separate Solo
+storage. Solo completion and tie rendering are also checked. Desktop, laptop,
+390px and 320px mobile, and landscape gameplay keep all cards visible without
+scrolling; board and control geometry stay fixed across flips and turn changes.
+
+Expo browser checks verify rapid mode switching without layout jumps, centered
+score panels at five viewport sizes, synchronized turn tints after reverse
+flips, bonus-turn color continuity, keyboard leaderboard tabs and empty states,
+exact idle/countdown deadlines, consumed touch/click/key dismissal, pointer
+movement, timeout during a pending mismatch or reset dialog, saved-result
+preservation, and Solo expiry while the idle overlay is open.

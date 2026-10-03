@@ -6,10 +6,12 @@ export function assetUrl(path) {
 export const gameConfig = Object.freeze({
   roundDurationSeconds: 60,
   mismatchRevealDelayMs: 900,
+  matchResolutionMs: 220,
   entryDurationMs: 660,
   winCelebrationMs: 1800,
   playerNameMaxLength: 40,
   leaderboardStorageKey: 'nawras-memory.leaderboard.v1',
+  multiplayerLeaderboardStorageKey: 'nawras-memory.multiplayer.leaderboard.v1',
   sound: Object.freeze({ enabled: true, volume: 0.16 }),
   brandImagePath: 'assets/branding/nawras-name.png',
   cardBackImagePath: 'assets/branding/light-nawras.png',

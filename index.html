@@ -13,17 +13,33 @@
         <svg class="landing-particles" xmlns="http://www.w3.org/2000/svg" focusable="false"></svg>
       </div>
       <section class="landing" aria-labelledby="landing-title">
+        <div class="landing-content">
         <div class="brand" id="landing-brand"></div>
         <div class="landing-copy">
           <h1 id="landing-title"><span>Nawras</span> <span class="memory-title">Memory</span></h1>
         </div>
         <div class="player-entry">
-          <label for="player-name">Enter your name</label>
-          <input id="player-name" name="playerName" type="text" autocomplete="given-name" maxlength="40" required aria-describedby="player-name-hint player-name-error" />
-          <span id="player-name-hint" class="sr-only">Enter a name for your results and this browser’s leaderboard. Find six pairs in 60 seconds.</span>
-          <span id="player-name-error" class="name-error" role="status" hidden>Enter your name to start.</span>
+          <div class="mode-choice" role="group" aria-label="Game mode">
+            <button type="button" data-mode="solo" aria-pressed="true">Solo</button>
+            <button type="button" data-mode="multiplayer" aria-pressed="false">2 Players</button>
+          </div>
+          <div class="setup-form">
+            <label for="player-name">Enter your name</label>
+            <input id="player-name" name="playerName" type="text" autocomplete="given-name" maxlength="40" required aria-describedby="player-name-hint player-name-error" />
+            <span id="player-name-hint" class="sr-only">Enter a name for your results and this browser’s leaderboard. Find six pairs in 60 seconds.</span>
+            <span id="player-name-error" class="name-error" role="status" hidden>Enter your name to start.</span>
+            <div class="second-player-entry" hidden>
+              <label for="player-two-name">Player 2 name</label>
+              <input id="player-two-name" name="playerTwoName" type="text" autocomplete="off" maxlength="40" aria-describedby="player-two-name-error" />
+              <span id="player-two-name-error" class="name-error" role="status" hidden>Enter the second player’s name.</span>
+            </div>
+          </div>
+        </div>
+        </div>
+        <div class="landing-actions">
           <button class="start-button" type="button">Start</button>
         </div>
+        <button class="secondary-button menu-leaderboard" id="open-leaderboard" type="button">Leaderboard</button>
       </section>
     </main>
     <script type="module" src="/src/main.js"></script>

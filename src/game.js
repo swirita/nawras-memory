@@ -18,6 +18,7 @@ export function createMemoryGame(config, onChange, onEnd, onSound = () => {}) {
     return setTimeout(() => { if (round === generation) callback(); }, delay);
   }
   function remaining() {
+    if (state.mode === 'multiplayer') return durationMs;
     if (state.status === 'won' || state.status === 'expired') return state.finalRemainingMs;
     if (state.status === 'entering') return durationMs;
     if (state.status === 'paused') return state.pausedRemaining;
@@ -32,6 +33,9 @@ export function createMemoryGame(config, onChange, onEnd, onSound = () => {}) {
     state.finalRemainingMs = remaining();
     state.elapsedMs = durationMs - state.finalRemainingMs;
     state.elapsedSeconds = state.elapsedMs / 1000;
+    if (state.mode === 'multiplayer') {
+      state.winner = state.scores[0] === state.scores[1] ? null : state.scores[0] > state.scores[1] ? 0 : 1;
+    }
     state.status = outcome;
     cancelTimers();
     publish();
@@ -40,6 +44,7 @@ export function createMemoryGame(config, onChange, onEnd, onSound = () => {}) {
   }
   function tick() {
     if (state?.status !== 'playing') return;
+    if (state.mode === 'multiplayer') return;
     clearTimeout(countdown);
     if (remaining() <= 0) { end('expired'); return; }
     if (lastRemaining !== Math.ceil(remaining() / 1000)) publish();
@@ -52,7 +57,7 @@ export function createMemoryGame(config, onChange, onEnd, onSound = () => {}) {
     // Publish the status transition even though the displayed time stays 1:00.
     publish();
   }
-  function start({ entryDurationMs = 0 } = {}) {
+  function start({ entryDurationMs = 0, mode = 'solo', players = [], startingPlayer, turnTransitionMs = 0 } = {}) {
     cancelTimers();
     lastRemaining = undefined;
     const cards = config.pairs.flatMap(pair => [0, 1].map(copy => ({ ...pair, key: `${pair.id}-${copy}`, matched: false, revealed: false })));
@@ -61,7 +66,10 @@ export function createMemoryGame(config, onChange, onEnd, onSound = () => {}) {
       [cards[i], cards[j]] = [cards[j], cards[i]];
     }
     state = { cards, status: 'entering', selected: [], locked: false, moves: 0, pairsFound: 0,
+      mode, players: [...players], scores: [0, 0], turnTransitionMs,
+      startingPlayer: mode === 'multiplayer' ? (startingPlayer === 0 || startingPlayer === 1 ? startingPlayer : Math.floor(Math.random() * 2)) : 0,
       deadline: 0, entryDurationMs, entryDeadline: Date.now() + entryDurationMs };
+    state.activePlayer = state.startingPlayer;
     publish();
     if (entryDurationMs > 0) entrance = schedule(activate, entryDurationMs);
     else activate();
@@ -71,7 +79,26 @@ export function createMemoryGame(config, onChange, onEnd, onSound = () => {}) {
     if (remaining() <= 0) { end('expired'); return; }
     state.selected.forEach(i => { state.cards[i].revealed = false; });
     state.selected = [];
+    if (state.mode === 'multiplayer' && state.turnTransitionMs > 0) {
+      state.resolution = 'turn';
+      state.mismatchDeadline = Date.now() + state.turnTransitionMs;
+      mismatch = schedule(finishTurn, state.turnTransitionMs);
+      publish();
+      return;
+    }
+    finishTurn();
+  }
+  function finishTurn() {
+    if (state.status !== 'playing') return;
     state.locked = false;
+    state.resolution = null;
+    if (state.mode === 'multiplayer') state.activePlayer = 1 - state.activePlayer;
+    publish();
+  }
+  function resolveMatch() {
+    if (state.status !== 'playing') return;
+    state.locked = false;
+    state.resolution = null;
     publish();
   }
   function select(index) {
@@ -88,10 +115,18 @@ export function createMemoryGame(config, onChange, onEnd, onSound = () => {}) {
         first.matched = second.matched = true;
         state.selected = [];
         state.pairsFound++;
+        if (state.mode === 'multiplayer') state.scores[state.activePlayer]++;
         if (state.pairsFound === config.pairs.length) { end('won'); return; }
+        if (state.mode === 'multiplayer') {
+          state.locked = true;
+          state.resolution = 'match';
+          state.mismatchDeadline = Date.now() + (config.matchResolutionMs ?? 220);
+          mismatch = schedule(resolveMatch, config.matchResolutionMs ?? 220);
+        }
         onSound('match');
       } else {
         state.locked = true;
+        state.resolution = 'mismatch';
         state.mismatchDeadline = Date.now() + config.mismatchRevealDelayMs;
         mismatch = schedule(resolveMismatch, config.mismatchRevealDelayMs);
         onSound('mismatch');
@@ -122,13 +157,18 @@ export function createMemoryGame(config, onChange, onEnd, onSound = () => {}) {
       state.deadline = Date.now() + state.pausedRemaining;
       if (state.locked) {
         state.mismatchDeadline = Date.now() + state.mismatchRemaining;
-        mismatch = schedule(resolveMismatch, state.mismatchRemaining);
+        mismatch = schedule(state.resolution === 'match' ? resolveMatch : state.resolution === 'turn' ? finishTurn : resolveMismatch, state.mismatchRemaining);
       }
       tick();
       publish();
     }
   }
-  function stop() { cancelTimers(); if (state) state.status = 'idle'; }
+  function stop() {
+    cancelTimers();
+    if (state) state.status = 'idle';
+    state = undefined;
+    lastRemaining = undefined;
+  }
   function finishEntrance() {
     if (state?.status === 'paused' && state.resumeStatus === 'entering') {
       state.entryRemaining = 0;
