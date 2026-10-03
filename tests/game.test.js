@@ -125,6 +125,41 @@ test('multiplayer chooses a random starter and accepts the alternate starter for
 }));
 
 // A deterministic scheduler verifies boundary timing without waiting a minute.
+test('solo clock wakes at displayed seconds and refresh preserves exact boundaries', () => roundCheck(r => {
+  assert.equal(r.callbacks.size, 1);
+  r.advance(450);
+  r.game.refresh();
+  r.advance(549);
+  assert.equal(r.state.remainingSeconds, 60);
+  r.advance(1);
+  assert.equal(r.state.remainingSeconds, 59);
+  r.advance(999);
+  assert.equal(r.state.remainingSeconds, 59);
+  r.advance(1);
+  assert.equal(r.state.remainingSeconds, 58);
+  r.advance(57999);
+  assert.equal(r.outcomes.length, 0);
+  r.advance(1);
+  assert.equal(r.outcomes[0].status, 'expired');
+  assert.equal(r.callbacks.size, 0);
+}));
+
+test('200 alternating rounds cancel pending resolutions without accumulating timers', () => roundCheck(r => {
+  for (let i = 0; i < 200; i++) {
+    r.game.start({ mode: i % 2 ? 'multiplayer' : 'solo', players: ['A', 'B'], turnTransitionMs: 220 });
+    r.mismatch();
+    assert.ok(r.callbacks.size <= 2);
+    const stale = [...r.callbacks.values()].map(callback => callback.fn);
+    r.game.pause();
+    assert.equal(r.callbacks.size, 0);
+    r.game.resume();
+    r.game.stop();
+    stale.forEach(callback => callback());
+    assert.equal(r.callbacks.size, 0);
+    assert.equal(r.outcomes.length, 0);
+  }
+}));
+
 function roundCheck(check) {
   const original = { now: Date.now, setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout, random: Math.random };
   let now = 100000;

@@ -48,7 +48,10 @@ export function createMemoryGame(config, onChange, onEnd, onSound = () => {}) {
     clearTimeout(countdown);
     if (remaining() <= 0) { end('expired'); return; }
     if (lastRemaining !== Math.ceil(remaining() / 1000)) publish();
-    countdown = schedule(tick, Math.min(100, remaining()));
+    // Wake at the next visible second (or expiry), rather than polling at 10Hz.
+    // Selection and visibility refresh still check the exact deadline.
+    const remainingMs = remaining();
+    countdown = schedule(tick, Math.max(1, remainingMs - (Math.ceil(remainingMs / 1000) - 1) * 1000));
   }
   function activate() {
     state.status = 'playing';

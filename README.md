@@ -1,209 +1,160 @@
-﻿# Nawras Memory
+# Nawras Memory
 
-A NawrasEdu memory game built with Vite, plain HTML, CSS, and JavaScript.
+A NawrasEdu expo memory game built with Vite, HTML, CSS, and JavaScript.
+Vite is the only development dependency; there are no runtime dependencies,
+downloaded fonts, sound files, accounts, or backend services.
 
-## Run locally
+## Build and preview
 
-Use Node.js 22.12+ and npm (npm.cmd on Windows if PowerShell blocks npm.ps1).
+Use Node.js 24 (the CI version), or Node.js 22.12+ with npm.
+On Windows use `npm.cmd` if PowerShell blocks `npm.ps1`.
 
 ```sh
-npm install
-npm run dev
+npm ci
+npm test
 npm run build
-npm run preview
-npm run test
+npm run check:build
+npm run preview -- --host 127.0.0.1 --port 4173 --strictPort
 ```
 
-Production output goes to `dist/`. Vite is the only development dependency;
-there are no runtime dependencies.
+Open **http://127.0.0.1:4173/nawras-memory/** for the production preview.
+The deployable output is `dist/`; do not commit it or `node_modules/`.
+For development run `npm run dev` and use the URL Vite prints, normally
+http://localhost:5173/. Development uses `/`; production and preview use
+`/nawras-memory/`.
 
-## Play
+## GitHub Pages setup
 
-Choose Solo or 2 Players and enter the required names, then press Start.
-Names are trimmed and limited to 40 characters. Solo retains its timed round.
-The face-down cards arrive in a short,
-660ms stagger; selection and the 60-second countdown begin afterward. Reduced
-motion starts immediately. Find all six pairs before time runs out.
-A move is two valid selections. Matching cards stay in place;
-mismatches turn back after 900ms. Mouse, touch, and keyboard (Tab, Enter, Space)
-use the same selection rules. The last match freezes the time and moves
-immediately, then celebrates on the stationary board for 1.8 seconds before
-showing results. Reduced motion uses a brief static highlight. Time expiry
-opens results immediately without a victory celebration.
-Reset Game opens a keyboard-accessible confirmation dialog and pauses the
-countdown and any pending mismatch. Cancel or Escape resumes the same round.
-Reset reshuffles and replays the entrance. Play Again starts a fresh round
-with the same player; New Player returns to an empty name entry.
-Results emphasize completion seconds for wins or pairs found for time-up
-rounds, with moves below. The browser-local leaderboard keeps each player's best
-completed round, ranked by completion time at the displayed 0.01-second
-precision and then moves. Exact ties share standard competition ranks (1, 1,
-3) and retain stable stored order. Legacy records with missing moves retain
-that unknown value and their relative order when a comparison cannot be made.
-Unfinished rounds are excluded. Names and records stay in this browser;
-there is no account or backend service.
+The existing remote is **https://github.com/swirita/nawras-memory**.
+The intended Pages URL is **https://swirita.github.io/nawras-memory/**.
+This static application needs a Vite build. Serve `dist/`, not the source files.
 
-2 Players uses the same six pairs without a time limit. The first starter is
-random. Matches award one point and another turn; misses switch players only
-after the 900ms reveal delay. The cyan and lavender score panels identify the
-current turn. A completed round celebrates before showing the winner and both
-scores, or a 3–3 draw. Only winners are saved, using their 4, 5, or 6 pairs.
-The separate multiplayer leaderboard keeps one personal best per player; equal
-scores share ranks without time or moves breaking ties. Rematch keeps both
-names and alternates the previous starting player. Home cancels the round.
-Reset confirmation pauses pending resolution and celebration callbacks;
-confirming reset cancels them and starts a clean board. Results are saved once
-when the result screen opens; abandoned rounds and reset celebrations are not
-saved. Multiplayer records use `nawras-memory.multiplayer.leaderboard.v1`,
-while existing Solo records retain `nawras-memory.leaderboard.v1`.
+1. Commit the release changes, including `.github/workflows/`, and push to `main`.
+2. Open **Settings → Pages → Build and deployment** in the repository.
+   Select **GitHub Actions** as Source. Ensure Actions are enabled.
+3. Open **Actions → Deploy GitHub Pages → Run workflow**, choose `main`, and run it.
+4. Wait for deployment to pass, then open **https://swirita.github.io/nawras-memory/**.
 
-The setup form fades out and in over 250ms when changing modes, with reserved
-space and a sliding selection indicator. Names are centered in setup and in
-the equal-width player panels above the board. Multiplayer crossfades soft
-cyan/lavender full-screen tints over 500ms, synchronized with the active player
-after mismatched cards finish their reverse flip. Solo retains its background.
-Reduced motion removes these transitions. The start menu's Leaderboard button
-opens all saved participants with Solo/2 Players tabs and a Back button.
-Both menu and result leaderboards show all eligible records in a bounded,
-scrollable list. The top five ranks are highlighted, including everyone tied
-at the cutoff; tied display order never changes a player's rank. Back, tabs,
-and Clear leaderboard remain outside the list so they stay accessible while
-scrolling. The list supports pointer, touch, and keyboard scrolling.
-Clear leaderboard removes all saved scores for the selected tab after
-confirmation; the other mode's records stay intact. Cancel or Escape leaves
-scores untouched. Cleared scores stay removed after refreshing the page.
+`ci.yml` tests and builds on pushes to `main` and pull requests.
+`pages.yml` installs from the lockfile, runs tests/build/asset checks, uploads only
+`dist/`, and deploys with official Pages actions pinned to commit hashes.
+Deployment is **manual**: a push runs CI but does not publish. Run the deployment
+workflow again for later releases. No publishing was performed during preparation.
 
-Expo inactivity is independent of the round timer. At 60 seconds without real
-pointer, touch, or keyboard activity, an overlay counts down “Next player in
-10…” through 1. Continue playing or any interaction dismisses it and starts
-a fresh inactivity deadline; the dismissing gesture is consumed. At 70 seconds,
-the app returns to setup, clears names and round state, closes dialogs, and
-cancels pending callbacks. The start menu never shows the overlay; stale setup
-names are silently cleared at the same deadline. Automatic navigation, turn
-changes, animation, sound, and synthetic events do not reset inactivity. Solo
-time continues while the overlay is open. Previously saved results are kept;
-unfinished rounds are never saved.
+`vite.config.js` sets the production base to `/nawras-memory/`.
+Dynamic images use `assetUrl()` and Vite's base, so images, scripts, and styles
+load under the repository subpath. There is no URL router: screens change on
+one page; refresh returns to setup. No SPA fallback or `404.html` is needed.
+If renaming the repository or adding a custom domain, update the production
+base and the expected subpath in `scripts/check-build.mjs`, then rebuild.
 
-## Implementation
+References: [Vite Pages guide](https://vite.dev/guide/static-deploy.html#github-pages)
+and [GitHub publishing-source instructions](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).
 
-- `src/game.js`: Fisher–Yates shuffle, selection guards, matching, deadline-based
-  timing, entrance gating, pause/resume, and cancellation of all round callbacks.
-- `src/main.js`: landing, accessible card buttons, screen transitions, live
-  announcements, focus management, and results. Returning to a visible tab
-  checks the deadline; leaving the page cancels the round.
-- `src/config.js`: unchanged 60-second duration, 900ms mismatch delay, original
-  assets, six configured pairs, and relative `assetUrl()` helper. Also owns the
-  660ms entrance, 1800ms winning celebration, player-name length limit,
-  `nawras-memory.leaderboard.v1` storage key, and `sound.enabled` /
-  `sound.volume` (0–1) settings.
-- `src/celebration.js`: final-flip timing, cyan-and-gold glow, short confetti,
-  delayed victory sound, and cancelable result transition. Reset confirmation
-  pauses and resumes the sequence; starting or leaving cancels old callbacks.
-- `src/leaderboard.js`: validated localStorage records, safe name normalization,
-  one personal best per player, precision sorting, and once-per-round saving.
-  Unavailable storage falls back to records for the current session.
-- `src/idle.js`: one independent inactivity/countdown deadline, throttled
-  movement tracking, consumed dismissal gestures, and navigation cleanup.
-- `src/mode-switch.js`: cancelable form transitions; only the latest requested
-  mode commits, with immediate updates for reduced motion.
-- `src/audio.js`: soft synthesized flip, match, mismatch, win, and expiry tones.
-  One audio context unlocks after interaction; completed nodes disconnect.
-  Invalid selections emit no sound, flip cues are throttled, and new cues fade
-  out older tones. Audio failures leave gameplay available.
-- `src/styles.css`: shared logo-sampled navy, cyan, mint, and purple; existing
-  system typography, pale blue background, and gold primary buttons. Desktop
-  uses four columns and three rows; portrait mobile uses three columns and four
-  rows. Cards keep a 4:5 portrait ratio, sized from both the available height
-  and width below the compact timer, moves, and reset bar. The centered board
-  reserves room for hover, shadows, and keyboard focus. Absolutely positioned
-  visual layers keep images and transforms outside grid sizing; a clipped
-  board viewport prevents perspective overflow from creating scrollbars.
-  Backs use layered navy glass gradients, a thin cyan inset line, and cropped
-  cyan and lavender contours. The light logo sits directly on the navy base;
-  revealed faces use a pale frosted gradient. Hover and focus use stationary cyan outlines and glows;
-  successful matches briefly show a gold border and small sparkle before
-  settling to a restrained cyan glow, without changing the footprint.
-  Reduced motion removes entrance, flips, and decorative motion, and uses
-  a static gold match highlight.
-- `src/particles.js`: sparse landing particles and their lifecycle. They pause
-  while gameplay or results are displayed and resume on returning to Start.
-- `vite.config.js`: preserved `base: './'` for GitHub Pages repository subpaths.
+## Gameplay and leaderboards
 
-## Supplied assets
+Choose Solo or 2 Players and enter the required names. Names are trimmed,
+Unicode-normalized, and limited to 40 characters. Twelve cards contain six pairs.
+The 660ms entrance gates input; reduced motion starts immediately.
+A move is two valid selections. Matching cards remain in place; mismatches
+reveal for 900ms. Rapid and duplicate selections are guarded.
 
-Original logo files are preserved, including transparency and proportions.
-Images use contain sizing without stretching or cropping. The name logo has
-no surrounding frame. Every card back uses `light-nawras.png`, with its visible
-artwork centered to account for transparent padding.
+Solo has 60 seconds after entrance. Completion time freezes on the final match.
+Best completed rounds sort by displayed centiseconds (0.01 seconds), then moves.
+Exact ties share competition ranks (1, 1, 3), with stable stored order. Legacy
+records without moves remain supported; unknown moves are never treated as zero.
+Unfinished and expired rounds do not qualify.
 
-| Asset in public/assets | Purpose |
-| --- | --- |
-| branding/nawras-name.png | Landing and result header |
-| branding/light-nawras.png | All card backs |
-| branding/nawras-small.png | NawrasEdu pair |
-| cards/python.png | Python pair; existing conversion of supplied WebP |
-| cards/robot.png | Robot pair; existing conversion of supplied WebP |
-| cards/laptop.png | Laptop pair; existing supplied copy |
-| cards/controller.png | Controller pair; existing supplied copy |
-| cards/lightbulb.png | Lightbulb pair; existing supplied copy |
+2 Players has no round time limit and a random first starter. A match awards
+one point and another turn. Misses change turns after the reveal delay and the
+220ms reverse flip; reduced motion omits the flip wait. Names, score panels,
+and cyan/lavender backgrounds identify the active player. Rematch keeps names
+and alternates the previous starter. Results show both scores and a winner or
+a 3–3 draw. Only winners with 4, 5, or 6 pairs qualify. Each player's best score
+is retained; equal scores share ranks without time or moves breaking ties.
 
-Source images also remain in the cards directory. Theme values are centralized
-in CSS variables. The sampled palette is navy #082558, cyan #28b9e3, mint
-#7edebf, and purple #724cc9. Warm gold continues the landing's primary action.
-Missing images display a readable text fallback rather than a broken icon.
+Results show **at most five entries**. Home's Leaderboard button shows all
+eligible participants in separate Solo/2 Players tabs. Competition ranks stay
+the same in both views. The full list highlights ranks 1–5, including ties, and
+scrolls while keeping navigation accessible. Clear leaderboard requires
+confirmation and removes only the selected mode's scores.
 
-## Verification
+Scores are **local to each browser and origin**, not shared between expo stations.
+Storage keys and record formats remain compatible:
 
-`npm run test` runs deterministic round tests with Node's built-in test runner,
-covering matching, repeated and rapid selections, the exact mismatch delay,
-winning, deadline expiry during a mismatch, late timer delivery, entrance
-timing, pause/cancel, repeated resets, stale callbacks, sound events, and elapsed
-time excluding pauses. The 42 tests also cover frozen winning time,
-celebration timing/cancellation/reduced motion, leaderboard precision,
-personal-best updates, persistence, safe names, and storage failure.
-No test dependencies are needed.
+- Solo: `nawras-memory.leaderboard.v1`
+- Multiplayer: `nawras-memory.multiplayer.leaderboard.v1`
 
-Local browser verification used the production build in Chrome: desktop,
-1280x720 laptop, 390px and 320px mobile, and landscape layouts; keyboard and
-touch controls; repeated resets during pending mismatches; entrance timing;
-dialog focus trapping and Escape; reduced motion; image loading; no gameplay
-scrolling or clipping; and no console errors. Gameplay and result screens were
-rendered and visually inspected. Browser expiry tests advance a controlled
-clock. Audio checks verify real signal output, distinct note sequences, context
-reuse, completed-node cleanup, and unavailable-audio fallback. GitHub Pages
-subpath serving is checked locally. Physical devices, Safari, and Firefox
-have not been checked; deployment remains for later.
+Refresh and future releases at the same origin retain scores. Moving from
+localhost to Pages, another browser, or another domain uses different storage;
+scores do not migrate automatically. Unavailable storage falls back to the
+current session. No server or shared-score service has been added.
 
-Winning-result checks cover the final flip before celebration, exact stopping
-time, automatic transition, reset confirmation during celebration, page exit,
-time-up without celebration, repeated rounds, duplicate-save prevention,
-refresh persistence, and personal-best/tie ordering. Desktop and mobile
-results were visually inspected with five rows and an empty leaderboard;
-narrow screens scroll vertically without horizontal overflow.
+## Reset, celebration, and inactivity
 
-Card polish verification samples outer card, board, and control rectangles
-through delayed image loading, entry animation, every card flip, 12 deliberate
-mismatches, and matching pairs at desktop, mobile, small mobile, and landscape
-sizes. All samples keep their positions and dimensions, with no page overflow
-or scrolling. Both faces have identical dimensions and hidden backfaces;
-all tested cards maintain 9:10 proportions. Timer and move values have reserved
-widths so changing digits cannot nudge neighboring controls.
+The last match celebrates on a stationary board for 1.8 seconds before results;
+reduced motion uses a 400ms static highlight. Saving happens once per completed
+round when results open. Reset confirmation pauses the round, pending resolution,
+or celebration. Cancel/Escape resumes it; Reset starts a clean board with the
+same players. Home/New Player clears names and cancels the old round. Abandoned
+rounds and reset celebrations do not save scores.
 
-The navy-card update was checked at desktop, 1280x720 laptop, portrait mobile,
-small mobile, and landscape sizes. Hover keeps the visual layer stationary;
-keyboard focus stays clearly outlined. Gold match effects, reduced motion,
-reset confirmation, and the existing completion sequence were checked.
+Inactivity is independent of Solo time. At 60 seconds without real pointer,
+touch, keyboard, input, or wheel activity, the overlay counts down “Next player
+in 10…” through 1. Activity dismisses it and restarts the deadline; the gesture
+is consumed so it cannot select a card underneath. At 70 seconds, setup returns,
+names and round state clear, dialogs close, and pending callbacks cancel.
+Setup suppresses the overlay but clears stale names at the same deadline.
+Automatic navigation, animations, sounds, and synthetic events are not activity.
+Solo time continues during the overlay. Previously saved scores remain intact.
 
-Two-player browser checks cover bonus turns, delayed turn switching, rapid
-clicks, winner-only saving, 3–3 draws, shared ranks, alternate rematch starters,
-reset during mismatch and celebration, Home cancellation, and separate Solo
-storage. Solo completion and tie rendering are also checked. Desktop, laptop,
-390px and 320px mobile, and landscape gameplay keep all cards visible without
-scrolling; board and control geometry stay fixed across flips and turn changes.
+Sounds use one reusable AudioContext; finished oscillators and gain nodes
+disconnect. Audio failure does not prevent gameplay. Returning to a visible
+tab checks the exact deadline. Page exit cancels the round; restoration from
+the back-forward cache reloads setup.
 
-Expo browser checks verify rapid mode switching without layout jumps, centered
-score panels at five viewport sizes, synchronized turn tints after reverse
-flips, bonus-turn color continuity, keyboard leaderboard tabs and empty states,
-exact idle/countdown deadlines, consumed touch/click/key dismissal, pointer
-movement, timeout during a pending mismatch or reset dialog, saved-result
-preservation, and Solo expiry while the idle overlay is open.
+## Verification and implementation
+
+`npm test` uses Node's built-in test runner with no test dependencies. It checks
+rules, deadlines, stale callbacks, reset/pause, eligibility, ties, persistence,
+celebration, and inactivity, including 200 alternating rounds with cancellation.
+`npm run check:build` checks built entry points, the repository subpath, and all
+eight dynamically referenced images against their unchanged original bytes.
+
+See [the release audit](docs/release-report.md) for measurements, browser checks,
+cleanup, and remaining checks. Chrome production checks use existing local
+tooling in ignored `.checks/`, which is not a runtime or CI dependency.
+Before the expo, check the published URL on the actual kiosk with its audio,
+touch input, and display scaling. Safari and Firefox need separate checks.
+
+Optional browser checks reuse Playwright Core from `.checks/node_modules/`.
+On a fresh checkout, install the isolated tooling and run against the preview:
+
+```sh
+npm install --prefix .checks --no-save --no-package-lock playwright-core
+npm run check:browser
+npm run check:soak
+npm run measure:browser -- after
+```
+
+These commands use an installed Chrome browser, defaulting to its Windows
+installation path. Set `CHROME_PATH` for other installations, and `RELEASE_URL`
+for a different preview host/port (include `/nawras-memory/`). They write
+screenshots and measurements only to ignored `.checks/`.
+
+- `src/game.js`: shuffle, exact deadlines, selection, turns, and timer cancellation.
+- `src/main.js`: screens, delegated card input, guarded display updates, dialogs,
+  accessibility, results, and leaderboard views.
+- `src/leaderboard.js`: validated best records, storage compatibility, and ranks.
+- `src/idle.js`, `src/celebration.js`, `src/mode-switch.js`: separately owned,
+  cancelable inactivity, completion, and setup transitions.
+- `src/particles.js`: landing-only SVG motion, scoped observers, layout reuse,
+  hidden-page pausing, and unmount cleanup.
+- `src/audio.js`: synthesized cues and completed-node cleanup.
+- `src/config.js`: current rules, storage keys, and asset paths.
+- `src/styles.css`: current 9:10 cards, fixed layout, contours, glows, transforms,
+  turn tints, and reduced-motion behavior.
+
+Displayed assets preserve their bytes, transparency, and sizing: the three
+`public/assets/branding/` logos and `cards/{python,robot,laptop,controller,lightbulb}.png`.
+Missing images retain a readable text fallback.

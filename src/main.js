@@ -33,12 +33,12 @@ function showAsset(container, path, label) {
 showAsset(document.querySelector('#landing-brand'), gameConfig.brandImagePath, 'NawrasEdu');
 
 // Keep the landing name across rounds; it is only displayed locally.
-export function getPlayerName() {
+function getPlayerName() {
   return normalizePlayerName(document.querySelector('#player-name').value, gameConfig.playerNameMaxLength);
 }
 
 // Landing artwork pauses automatically when its screen is hidden.
-export const disposeLandingParticles = createLandingParticles(
+createLandingParticles(
   document.querySelector('.landing-particles'),
   document.querySelector('.landing'),
 );
@@ -158,7 +158,6 @@ try { storage = window.localStorage; } catch { storage = null; }
 const leaderboard = createLeaderboard(gameConfig, storage);
 const multiplayerLeaderboard = createLeaderboard(gameConfig, storage, 'multiplayer');
 let mode = 'solo';
-let players = [];
 let lastStartingPlayer;
 let currentWinnerName = '';
 let menuLeaderboardMode = 'solo';
@@ -192,20 +191,44 @@ let playerName = '';
 let previousStatus;
 let resetDuringCelebration = false;
 const formatTime = seconds => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+const controlStats = document.querySelector('.control-stats');
+const playerScores = document.querySelector('.player-scores');
+const playerPanels = [...document.querySelectorAll('.player-score')].map(panel => ({
+  panel, name: panel.querySelector('.player-score-name'), points: panel.querySelector('.player-score-points'),
+  turn: panel.querySelector('.turn-status'),
+}));
+const timeLeft = document.querySelector('#time-left');
+const timeStat = document.querySelector('#time-stat');
+const movesValue = document.querySelector('#moves');
+function setText(node, value) {
+  const text = String(value);
+  if (node.textContent !== text) node.textContent = text;
+}
+function setAttribute(node, name, value) {
+  if (node.getAttribute(name) !== value) node.setAttribute(name, value);
+}
+board.style.setProperty('--entry-duration', `${gameConfig.entryDurationMs / 2}ms`);
+board.addEventListener('click', event => {
+  const button = event.target.closest('.memory-card');
+  if (!button || button.parentElement !== board) return;
+  audio.unlock();
+  game.select(Number(button.dataset.index));
+});
 const game = createMemoryGame(gameConfig, state => {
   const multiplayer = state.mode === 'multiplayer';
   lastStartingPlayer = state.startingPlayer;
   gameScreen.classList.toggle('multiplayer', multiplayer);
-  main.dataset.turn = multiplayer ? String(state.activePlayer) : '';
-  document.querySelector('.control-stats').hidden = multiplayer;
-  document.querySelector('.player-scores').hidden = !multiplayer;
+  setAttribute(main, 'data-turn', multiplayer ? String(state.activePlayer) : '');
+  if (controlStats.hidden !== multiplayer) controlStats.hidden = multiplayer;
+  if (playerScores.hidden !== !multiplayer) playerScores.hidden = !multiplayer;
   if (multiplayer) {
-    document.querySelectorAll('.player-score').forEach((panel, index) => {
-      panel.querySelector('.player-score-name').textContent = state.players[index];
-      panel.querySelector('.player-score-points').textContent = state.scores[index];
+    playerPanels.forEach(({ panel, name, points, turn }, index) => {
+      setText(name, state.players[index]);
+      setText(points, state.scores[index]);
       panel.classList.toggle('is-active', index === state.activePlayer);
-      panel.querySelector('.turn-status').style.visibility = index === state.activePlayer ? 'visible' : 'hidden';
-      panel.setAttribute('aria-label', `${state.players[index]}: ${state.scores[index]} points${index === state.activePlayer ? ', your turn' : ''}`);
+      const visibility = index === state.activePlayer ? 'visible' : 'hidden';
+      if (turn.style.visibility !== visibility) turn.style.visibility = visibility;
+      setAttribute(panel, 'aria-label', `${state.players[index]}: ${state.scores[index]} points${index === state.activePlayer ? ', your turn' : ''}`);
     });
   }
   if (renderedCards !== state.cards) {
@@ -219,24 +242,24 @@ const game = createMemoryGame(gameConfig, state => {
       showAsset(button.querySelector('.card-back'), gameConfig.cardBackImagePath, 'NawrasEdu');
       showAsset(button.querySelector('.card-front'), card.imagePath, card.label);
       button.querySelector('.card-front').dataset.image = card.id;
-      button.addEventListener('click', () => { audio.unlock(); game.select(index); });
+      button.dataset.index = String(index);
       return button;
     }));
   }
-  board.style.setProperty('--entry-duration', `${gameConfig.entryDurationMs / 2}ms`);
   board.classList.toggle('is-entering', state.status === 'entering' || (state.status === 'paused' && state.resumeStatus === 'entering'));
   board.classList.toggle('is-paused', state.status === 'paused');
   state.cards.forEach((card, index) => {
     const button = board.children[index];
     button.classList.toggle('is-revealed', card.revealed);
     button.classList.toggle('is-matched', card.matched);
-    button.disabled = card.matched || state.status !== 'playing';
-    button.setAttribute('aria-disabled', String(state.locked || card.revealed || button.disabled));
-    button.setAttribute('aria-label', `Card ${index + 1}, ${card.matched ? `${card.label}, matched` : card.revealed ? card.label : 'face down'}`);
+    const disabled = card.matched || state.status !== 'playing';
+    if (button.disabled !== disabled) button.disabled = disabled;
+    setAttribute(button, 'aria-disabled', String(state.locked || card.revealed || disabled));
+    setAttribute(button, 'aria-label', `Card ${index + 1}, ${card.matched ? `${card.label}, matched` : card.revealed ? card.label : 'face down'}`);
   });
-  document.querySelector('#time-left').textContent = formatTime(state.remainingSeconds);
-  document.querySelector('#time-stat').classList.toggle('time-low', state.remainingSeconds <= 10);
-  document.querySelector('#moves').textContent = state.moves;
+  setText(timeLeft, formatTime(state.remainingSeconds));
+  timeStat.classList.toggle('time-low', state.remainingSeconds <= 10);
+  setText(movesValue, state.moves);
   if (state.pairsFound > previousPairs) announcement.textContent = `Pair found. ${state.pairsFound} of 6 pairs.`;
   else if (state.locked && !previousLocked) announcement.textContent = 'Different cards. Try another pair.';
   else if (previousLocked && !state.locked) announcement.textContent = multiplayer ? `${state.players[state.activePlayer]}'s turn. Choose two cards.` : 'Cards turned back. Choose two cards.';
@@ -256,12 +279,12 @@ const game = createMemoryGame(gameConfig, state => {
   } else showResult(state);
 }, kind => { if (kind !== 'won') audio.play(kind); });
 
-function renderLeaderboard(root = resultScreen.querySelector('.leaderboard'), boardMode = mode) {
+function renderLeaderboard(root = resultScreen.querySelector('.leaderboard'), boardMode = mode, showAll = false) {
   const currentLeaderboard = boardMode === 'multiplayer' ? multiplayerLeaderboard : leaderboard;
-  const records = currentLeaderboard.rankedAll();
+  const records = showAll ? currentLeaderboard.rankedAll() : currentLeaderboard.rankedTop();
   const list = root.querySelector('.leaderboard-list');
   list.tabIndex = 0;
-  list.setAttribute('aria-label', 'All ranked participants; top 5 ranks highlighted, including ties');
+  list.setAttribute('aria-label', showAll ? 'All ranked participants; top 5 ranks highlighted, including ties' : 'Top 5 participants');
   list.replaceChildren(...records.map(record => {
     const row = document.createElement('li');
     row.className = 'leaderboard-row';
@@ -293,7 +316,9 @@ function renderLeaderboard(root = resultScreen.querySelector('.leaderboard'), bo
   list.hidden = records.length === 0;
   root.querySelector('.leaderboard-empty').hidden = records.length > 0;
   root.querySelector('.leaderboard-note').hidden = currentLeaderboard.isPersistent();
-  root.querySelector('h3').textContent = boardMode === 'multiplayer' ? '2 PLAYERS · PARTICIPANTS' : 'PARTICIPANTS';
+  root.querySelector('h3').textContent = showAll
+    ? (boardMode === 'multiplayer' ? '2 PLAYERS · PARTICIPANTS' : 'PARTICIPANTS')
+    : (boardMode === 'multiplayer' ? '2 PLAYERS · TOP 5' : 'TOP 5');
   let summary = root.querySelector('.leaderboard-summary');
   if (!summary) {
     summary = document.createElement('p');
@@ -301,7 +326,7 @@ function renderLeaderboard(root = resultScreen.querySelector('.leaderboard'), bo
     root.querySelector('h3').after(summary);
   }
   summary.textContent = `${records.length} ${records.length === 1 ? 'participant' : 'participants'} · Top 5 ranks highlighted`;
-  summary.hidden = records.length === 0;
+  summary.hidden = !showAll || records.length === 0;
 }
 
 function showResult(state) {
@@ -358,7 +383,7 @@ function startRound({ rematch = false, reset = false } = {}) {
   document.querySelector('#player-name').value = playerName;
   document.querySelector('#player-name-error').hidden = true;
   document.querySelector('#player-name').removeAttribute('aria-invalid');
-  players = [playerName];
+  const players = [playerName];
   if (mode === 'multiplayer') {
     const input = document.querySelector('#player-two-name');
     const secondName = normalizePlayerName(input.value, gameConfig.playerNameMaxLength);
@@ -408,7 +433,6 @@ function backToStart() {
   gameScreen.hidden = resultScreen.hidden = true;
   board.replaceChildren();
   renderedCards = null;
-  players = [];
   playerName = currentWinnerName = '';
   lastStartingPlayer = undefined;
   previousPairs = 0;
@@ -467,8 +491,6 @@ document.querySelector('#player-name').addEventListener('input', () => {
 });
 document.querySelector('#new-player').addEventListener('click', () => {
   backToStart();
-  document.querySelector('#player-name').value = '';
-  document.querySelector('#player-two-name').value = '';
   document.querySelector('#player-name').focus({ preventScroll: true });
 });
 document.querySelector('#round-home').addEventListener('click', backToStart);
@@ -510,7 +532,7 @@ function selectLeaderboardMode(boardMode) {
     tab.tabIndex = selected ? 0 : -1;
     if (selected) document.querySelector('#menu-board-panel').setAttribute('aria-labelledby', tab.id);
   });
-  renderLeaderboard(menuLeaderboard.querySelector('.leaderboard'), boardMode);
+  renderLeaderboard(menuLeaderboard.querySelector('.leaderboard'), boardMode, true);
   document.querySelector('#clear-leaderboard').disabled = (boardMode === 'multiplayer' ? multiplayerLeaderboard : leaderboard).top().length === 0;
 }
 document.querySelector('#open-leaderboard').addEventListener('click', () => {

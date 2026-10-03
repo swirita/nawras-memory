@@ -19,6 +19,7 @@ export function createLandingParticles(svg, landing) {
   let disposed = false;
   let inView = true;
   let pageActive = true;
+  let layoutKey = '';
   const stage = landing.parentElement;
   const container = svg.parentElement;
 
@@ -43,7 +44,6 @@ export function createLandingParticles(svg, landing) {
     const stageBounds = stage.getBoundingClientRect();
     width = stageBounds.width;
     height = stageBounds.height;
-    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
     const content = [...landing.children].map(node => node.getBoundingClientRect());
     const quiet = {
       left: Math.min(...content.map(r => r.left)) - stageBounds.left - 40,
@@ -52,6 +52,10 @@ export function createLandingParticles(svg, landing) {
       bottom: Math.max(...content.map(r => r.bottom)) - stageBounds.top + 36,
     };
     const { left, right, top, bottom } = quiet;
+    const nextLayout = [width, height, left, right, top, bottom, mobile.matches].join(',');
+    if (nextLayout === layoutKey) { sync(); return; }
+    layoutKey = nextLayout;
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
     const r = 40;
     clipShape.setAttribute('d',
       `M 0 0 H ${width} V ${height} H 0 Z ` +
@@ -108,14 +112,18 @@ export function createLandingParticles(svg, landing) {
     svg.replaceChildren();
   }
   // Automatic unmount cleanup; explicit cleanup remains available to gameplay.
-  const observer = new MutationObserver(records => {
+  const observer = new MutationObserver(() => {
     if (!landing.isConnected) dispose();
-    else if (records.some(record => !container.contains(record.target))) { sync(); resize(); }
+    else { sync(); resize(); }
   });
-  observer.observe(document.body, {
+  // Card, score, timer and dialog mutations cannot change landing geometry.
+  observer.observe(landing, {
     subtree: true, childList: true, attributes: true,
     attributeFilter: ['hidden', 'class', 'style'],
   });
+  // Detect removal of the landing or its stage without watching round subtrees.
+  observer.observe(stage, { childList: true });
+  observer.observe(stage.parentElement, { childList: true });
   const intersectionObserver = new IntersectionObserver(([entry]) => {
     inView = entry.isIntersecting;
     sync();
